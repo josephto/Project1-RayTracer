@@ -145,22 +145,6 @@ __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& 
 
 	glm::vec3 localNormal;
 
-	/*if (epsilonCheck(localPointOnRay[1],0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,1,0,0)));
-	}else if (epsilonCheck(localPointOnRay[1],-0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,-1,0,0)));
-	}else if (epsilonCheck(localPointOnRay[2],0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,1,0)));
-	}else if (epsilonCheck(localPointOnRay[2],-0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,-1,0)));
-	}else if (epsilonCheck(localPointOnRay[0],0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(1,0,0,0)));
-	}else if (epsilonCheck(localPointOnRay[0],-0.5f)){
-		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(-1,0,0,0)));
-	}else{
-		localNormal = glm::vec3(.5,.5,.5);
-	}*/
-
 	if (abs(localPointOnRay[0]-.5) < 0.001){
 		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(1,0,0,0)));
 	}else if (abs(localPointOnRay[0] - (-.5)) < 0.001)

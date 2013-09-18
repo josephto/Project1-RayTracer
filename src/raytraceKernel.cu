@@ -124,9 +124,22 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
   if((x<=resolution.x && y<=resolution.y)){
 
 		ray rayFromCamera = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
+
+
+		//find aim point
+		vec3 aimPoint = rayFromCamera.origin + cam.focalLength*rayFromCamera.direction;
+
+		//jittered ray
+		float degOfJitter = 1.0;
+		vec3 jitter = generateRandomNumberFromThread(resolution, time, x, y);
+		ray jitteredRay;
+		jitteredRay.origin = vec3(rayFromCamera.origin.x+degOfJitter*jitter.x, rayFromCamera.origin.y+degOfJitter*jitter.y, rayFromCamera.origin.z);	
+		jitteredRay.direction = normalize(aimPoint-jitteredRay.origin);
+
+		rayFromCamera = jitteredRay;
+		
 		int reflectiveDepth = 1;
 		int rayCount = 0;
-
 		float tempLength, closest = 1e26;
 		int closestObjectid;
 		vec3 tempIntersectionPoint, tempNormal, normal, intersectionPoint;
@@ -186,7 +199,6 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 
 			//shadows, see if there is an object between light and pixel.
-			
 			ray pointToLight; 
 			pointToLight.origin = intersectionPoint;
 			pointToLight.direction = lightDir;
@@ -247,7 +259,8 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
     newStaticGeom.inverseTransform = geoms[i].inverseTransforms[frame];
     geomList[i] = newStaticGeom;
   }
-  
+
+     
   staticGeom* cudageoms = NULL;
   cudaMalloc((void**)&cudageoms, numberOfGeoms*sizeof(staticGeom));
   cudaMemcpy( cudageoms, geomList, numberOfGeoms*sizeof(staticGeom), cudaMemcpyHostToDevice);
@@ -263,6 +276,7 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   cam.view = renderCam->views[frame];
   cam.up = renderCam->ups[frame];
   cam.fov = renderCam->fov;
+  cam.focalLength = renderCam->focalLengths[frame];
 
   //clear image
   if (cameraMoved)

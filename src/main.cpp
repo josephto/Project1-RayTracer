@@ -231,32 +231,32 @@ void runCuda(){
 			   exit(1);
 			   break;
 		   case(97):	//a
-			   renderCam->positions->x += .1;
+			   renderCam->positions[targetFrame].x += .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
 		   case(115):	//s
-			   renderCam->positions->y -= .1;
+			   renderCam->positions[targetFrame].y -= .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
 		   case(100):	//d
-			   renderCam->positions->x -= .1;
+			   renderCam->positions[targetFrame].x -= .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
 		   case(119):	//w
-			   renderCam->positions->y += .1;
+			   renderCam->positions[targetFrame].y += .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
 		   case(105):	//i
-			   renderCam->positions->z -= .1;
+			   renderCam->positions[targetFrame].z -= .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
 		   case(111):	//o
-			   renderCam->positions->z += .1;
+			   renderCam->positions[targetFrame].z += .1;
 			   cameraMoved = true;
 			   iterations = 1;
 			   break;
