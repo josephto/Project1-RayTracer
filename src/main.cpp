@@ -25,6 +25,7 @@ int main(int argc, char** argv){
   // Set up pathtracer stuff
   bool loadedScene = false;
   finishedRender = false;
+  cameraMoved = false;
 
   targetFrame = 0;
   singleFrameMode = false;
@@ -124,8 +125,10 @@ void runCuda(){
     
   
     // execute the kernel
-    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, renderScene->objects.size() );
+    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, renderScene->objects.size(), cameraMoved );
     
+	cameraMoved = false;
+
     // unmap buffer object
     cudaGLUnmapBufferObject(pbo);
   }else{
@@ -221,11 +224,41 @@ void runCuda(){
 
 	void keyboard(unsigned char key, int x, int y)
 	{
-		std::cout << key << std::endl;
+		std::cout << (int)key << std::endl;
 		switch (key) 
 		{
 		   case(27):
 			   exit(1);
+			   break;
+		   case(97):	//a
+			   renderCam->positions->x += .1;
+			   cameraMoved = true;
+			   iterations = 1;
+			   break;
+		   case(115):	//s
+			   renderCam->positions->y -= .1;
+			   cameraMoved = true;
+			   iterations = 1;
+			   break;
+		   case(100):	//d
+			   renderCam->positions->x -= .1;
+			   cameraMoved = true;
+			   iterations = 1;
+			   break;
+		   case(119):	//w
+			   renderCam->positions->y += .1;
+			   cameraMoved = true;
+			   iterations = 1;
+			   break;
+		   case(105):	//i
+			   renderCam->positions->z -= .1;
+			   cameraMoved = true;
+			   iterations = 1;
+			   break;
+		   case(111):	//o
+			   renderCam->positions->z += .1;
+			   cameraMoved = true;
+			   iterations = 1;
 			   break;
 		}
 	}

@@ -34,7 +34,7 @@ __host__ __device__ unsigned int hash(unsigned int a){
 
 //Quick and dirty epsilon check
 __host__ __device__ bool epsilonCheck(float a, float b){
-    if(fabs(fabs(a)-fabs(b))<EPSILON){
+    if(fabs(fabs(a)-fabs(b))<0.0001){
         return true;
     }else{
         return false;
@@ -71,8 +71,118 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 //TODO: IMPLEMENT THIS FUNCTION
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
 __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+	float near = -1e26;
+	float far = 1e26;
 
-    return -1;
+	glm::vec3 ro = multiplyMV(box.inverseTransform, glm::vec4(r.origin,1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction,0.0f)));
+
+	ray rt; rt.origin = ro; rt.direction = rd;
+
+	if (rt.direction.x == 0){
+		if (rt.origin.x < -.5 || rt.origin.x > .5){
+			return -1;
+		}
+	}else{
+		float T1 = (-.5-rt.origin.x)/rt.direction.x;
+		float T2 = (.5 - rt.origin.x)/rt.direction.x;
+		if (T1 > T2){
+			float temp = T2;
+			T2 = T1;
+			T1 = temp;
+		}
+		if (T1 > near)		{near = T1;}
+		if (T2 < far)		far = T2;
+		if (near > far)		{return -1;}
+		if (far < 0)		{return -1;}
+	}
+
+	if (rt.direction.y == 0){
+		if (rt.origin.y < -.5 || rt.origin.y > .5){
+			return -1;
+		}
+	}else{
+		float T1 = (-.5-rt.origin.y)/rt.direction.y;
+		float T2 = (.5 - rt.origin.y)/rt.direction.y;
+		if (T1 > T2){
+			float temp = T2;
+			T2 = T1;
+			T1 = temp;
+		}
+		if (T1 > near)		near = T1;
+		if (T2 < far)		far = T2;
+		if (near > far)		{return -1;}
+		if (far < 0)		{return -1;}
+	}
+
+	if (rt.direction.z == 0){
+		if (rt.origin.z < -.5 || rt.origin.z > .5)
+			{return -1;}
+	}else{
+		float T1 = (-.5-rt.origin.z)/rt.direction.z;
+		float T2 = (.5-rt.origin.z)/rt.direction.z;
+		if (T1 > T2){
+			float temp = T2;
+			T2 = T1;
+			T1 = temp;
+		}
+		if (T1 > near)		near = T1;
+		if (T2 < far)		far = T2;
+		if (near > far)		{return -1;}
+		if (far < 0)		{return -1;}
+	}
+
+	glm::vec3 realIntersectionPoint;
+	glm::vec4 localPointOnRay;
+
+	if (near < 0){
+		localPointOnRay = glm::vec4(rt.origin+far*rt.direction, 1.0);
+		realIntersectionPoint = multiplyMV(box.transform, localPointOnRay);
+	}else{
+		localPointOnRay = glm::vec4(rt.origin+near*rt.direction, 1.0);
+		realIntersectionPoint = multiplyMV(box.transform, localPointOnRay);
+	}
+
+	glm::vec3 localNormal;
+
+	/*if (epsilonCheck(localPointOnRay[1],0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,1,0,0)));
+	}else if (epsilonCheck(localPointOnRay[1],-0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,-1,0,0)));
+	}else if (epsilonCheck(localPointOnRay[2],0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,1,0)));
+	}else if (epsilonCheck(localPointOnRay[2],-0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,-1,0)));
+	}else if (epsilonCheck(localPointOnRay[0],0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(1,0,0,0)));
+	}else if (epsilonCheck(localPointOnRay[0],-0.5f)){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(-1,0,0,0)));
+	}else{
+		localNormal = glm::vec3(.5,.5,.5);
+	}*/
+
+	if (abs(localPointOnRay[0]-.5) < 0.001){
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(1,0,0,0)));
+	}else if (abs(localPointOnRay[0] - (-.5)) < 0.001)
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(-1,0,0,0)));
+	else if (abs(localPointOnRay[1]-.5) <  0.001)
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,1,0,0)));
+	else if (abs(localPointOnRay[1] - (-.5)) <  0.001)
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,-1,0,0)));
+	else if (abs(localPointOnRay[2] - .5) <  0.001)
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,1,0)));
+	else if (abs(localPointOnRay[2] - (-.5)) <  0.0001)
+		localNormal = glm::normalize(multiplyMV(box.transform, glm::vec4(0,0,-1,0)));
+	else
+		localNormal = glm::normalize(glm::vec3(.5,.5,.5));
+	
+	//return far;
+	
+	normal = localNormal;
+
+	intersectionPoint = realIntersectionPoint;
+
+	return glm::length(r.origin - realIntersectionPoint);
 }
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.
