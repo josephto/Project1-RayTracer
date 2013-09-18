@@ -46,8 +46,8 @@ __host__ __device__ glm::vec3 generateRandomNumberFromThread(glm::vec2 resolutio
 //TODO: IMPLEMENT THIS FUNCTION
 //Function that does the initial raycast from the camera
 __host__ __device__ ray raycastFromCameraKernel(glm::vec2 resolution, float time, int x, int y, glm::vec3 eye, glm::vec3 view, glm::vec3 up, glm::vec2 fov){
-	vec3 jitter = generateRandomNumberFromThread(resolution, time, x, y);
-	float NDCx = ((float)x +jitter.x )/resolution.x;
+	vec3 jitter = 2.0f*generateRandomNumberFromThread(resolution, time, x, y);
+	float NDCx = ((float)x +jitter.x)/resolution.x;
 	float NDCy = ((float)y +jitter.y )/resolution.y;
 	
 	//float NDCx = ((float)x )/resolution.x;
@@ -130,103 +130,118 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		vec3 aimPoint = rayFromCamera.origin + cam.focalLength*rayFromCamera.direction;
 
 		//jittered ray
-		float degOfJitter = 1.0;
+		float degOfJitter = .50;
 		vec3 jitter = generateRandomNumberFromThread(resolution, time, x, y);
 		ray jitteredRay;
 		jitteredRay.origin = vec3(rayFromCamera.origin.x+degOfJitter*jitter.x, rayFromCamera.origin.y+degOfJitter*jitter.y, rayFromCamera.origin.z);	
 		jitteredRay.direction = normalize(aimPoint-jitteredRay.origin);
 
-		rayFromCamera = jitteredRay;
+		ray currentRay = jitteredRay;
 		
-		int reflectiveDepth = 1;
 		int rayCount = 0;
-		float tempLength, closest = 1e26;
-		int closestObjectid;
-		vec3 tempIntersectionPoint, tempNormal, normal, intersectionPoint;
-		vec3 pixelColor, objectColor, specColor;
-		float specExponent, isReflective;
+		vec3 realColor = vec3(0,0,0);
 
-		for (int i = 0; i < numberOfGeoms; i++){
-			if(geoms[i].type == CUBE){
-				tempLength = boxIntersectionTest( geoms[i], rayFromCamera, tempIntersectionPoint, tempNormal);
-			}else{
-				tempLength = sphereIntersectionTest(geoms[i], rayFromCamera, tempIntersectionPoint, tempNormal);
-			}
+		while(rayCount <= rayDepth){
+			float tempLength, closest = 1e26;
+			int closestObjectid;
+			vec3 tempIntersectionPoint, tempNormal, normal, intersectionPoint;
+			vec3 pixelColor, objectColor, specColor;
+			float specExponent, isReflective;
 
-			if (tempLength < closest && tempLength >= 0){
-				closest = tempLength;
-				normal = tempNormal;
-				intersectionPoint = tempIntersectionPoint;
-				closestObjectid = i;
-			}
-		}
-
-		pixelColor = vec3(.3,.3,.3);
-
-		if (closest < 1e26 && closest >= 0){
-			
-			if (closestObjectid == 8){
-				pixelColor = vec3(1,1,1);
-				colors[index] += pixelColor;
-				return;
-			}
-			objectColor = cudamaterials[geoms[closestObjectid].materialid].color;
-			specExponent = cudamaterials[geoms[closestObjectid].materialid].specularExponent;
-			specColor = cudamaterials[geoms[closestObjectid].materialid].specularColor;
-			isReflective = cudamaterials[geoms[closestObjectid].materialid].hasReflective;
-			vec3 lightDir = normalize(getRandomPointOnCube(geoms[numberOfGeoms-1],time) - intersectionPoint);
-
-			//ambient
-			vec3 ambient = objectColor;
-			
-			//diffuse
-			vec3 diffuse = dot(normal, lightDir) * /* lightcolor*/ vec3(1,1,1) * (objectColor);
-			diffuse = vec3(clamp(diffuse.x, 0.0, 1.0), clamp(diffuse.y, 0.0, 1.0), clamp(diffuse.z, 0.0, 1.0));
-
-			//specular phong lighting
-			if (specExponent > 0){
-				vec3 reflectedDir = rayFromCamera.direction - vec3(2*vec4(normal*(dot(rayFromCamera.direction,normal)),0));
-				//vec3 reflectedDir = lightDir -  vec3(2*vec4(normal*(dot(lightDir,normal)),0));
-				reflectedDir = normalize(reflectedDir);
-				float D = dot(reflectedDir, lightDir);
-				if (D < 0) D = 0;
-				vec3 specular = specColor*pow(D, specExponent);
-				pixelColor = .5f*diffuse+.4f*specular+.1f*ambient;
-			}else{
-				pixelColor = diffuse;
-			}
-
-
-
-			//shadows, see if there is an object between light and pixel.
-			ray pointToLight; 
-			pointToLight.origin = intersectionPoint;
-			pointToLight.direction = lightDir;
-			float lengthFromPointToLight = boxIntersectionTest( geoms[numberOfGeoms-1], pointToLight, tempIntersectionPoint, tempNormal);
-			tempLength = 1e26;
-			int occluded = -1;
 			for (int i = 0; i < numberOfGeoms; i++){
-				if (i != closestObjectid){
-					if(geoms[i].type == CUBE){
-						tempLength = boxIntersectionTest( geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
-					}else{
-						tempLength = sphereIntersectionTest(geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
-					}
+				if(geoms[i].type == CUBE){
+					tempLength = boxIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal);
+				}else{
+					tempLength = sphereIntersectionTest(geoms[i], currentRay, tempIntersectionPoint, tempNormal);
+				}
 
-					if (tempLength < lengthFromPointToLight && tempLength != -1){
-						occluded = i;
-						i = numberOfGeoms;
-					}
+				if (tempLength < closest && tempLength >= 0){
+					closest = tempLength;
+					normal = tempNormal;
+					intersectionPoint = tempIntersectionPoint;
+					closestObjectid = i;
 				}
 			}
 
-			//apply shadow, make darker
-			if (occluded != -1 && occluded != numberOfGeoms-1){
-				pixelColor = .2f*pixelColor;
-			}
-		}
+			pixelColor = vec3(0,0,0);
 
-		colors[index] += pixelColor;
+			if (closest < 1e26 && closest >= 0){
+			
+				if (closestObjectid == 8){
+					pixelColor = vec3(1,1,1);
+					colors[index] += pixelColor;
+					return;
+				}
+				objectColor = cudamaterials[geoms[closestObjectid].materialid].color;
+				specExponent = cudamaterials[geoms[closestObjectid].materialid].specularExponent;
+				specColor = cudamaterials[geoms[closestObjectid].materialid].specularColor;
+				isReflective = cudamaterials[geoms[closestObjectid].materialid].hasReflective;
+				vec3 lightDir = normalize(getRandomPointOnCube(geoms[numberOfGeoms-1],time) - intersectionPoint);
+
+				//ambient
+				vec3 ambient = objectColor;
+			
+				//diffuse
+				vec3 diffuse = dot(normal, lightDir) * /* lightcolor*/ vec3(1,1,1) * (objectColor);
+				diffuse = vec3(clamp(diffuse.x, 0.0, 1.0), clamp(diffuse.y, 0.0, 1.0), clamp(diffuse.z, 0.0, 1.0));
+
+				vec3 reflectedDir = currentRay.direction - vec3(2*vec4(normal*(dot(currentRay.direction,normal)),0));
+				reflectedDir = normalize(reflectedDir);
+				//specular phong lighting
+				if (specExponent > 0){
+					//vec3 reflectedDir = lightDir -  vec3(2*vec4(normal*(dot(lightDir,normal)),0));
+					float D = dot(reflectedDir, lightDir);
+					if (D < 0) D = 0;
+					vec3 specular = specColor*pow(D, specExponent);
+					pixelColor = .5f*diffuse+.4f*specular+.1f*ambient;
+				}else{
+					pixelColor = diffuse;
+				}
+
+				if (isReflective){
+					currentRay.origin = intersectionPoint+0.0001f*reflectedDir;
+					currentRay.direction = reflectedDir;
+				}else{
+					rayCount = rayDepth;
+				}
+
+				//shadows, see if there is an object between light and pixel.
+				ray pointToLight; 
+				pointToLight.origin = intersectionPoint;
+				pointToLight.direction = lightDir;
+				float lengthFromPointToLight = boxIntersectionTest( geoms[numberOfGeoms-1], pointToLight, tempIntersectionPoint, tempNormal);
+				tempLength = 1e26;
+				int occluded = -1;
+				for (int i = 0; i < numberOfGeoms; i++){
+					if (i != closestObjectid){
+						if(geoms[i].type == CUBE){
+							tempLength = boxIntersectionTest( geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
+						}else{
+							tempLength = sphereIntersectionTest(geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
+						}
+
+						if (tempLength < lengthFromPointToLight && tempLength != -1){
+							occluded = i;
+							i = numberOfGeoms;
+						}
+					}
+				}
+
+				//apply shadow, make darker
+				if (occluded != -1 && occluded != numberOfGeoms-1){
+					pixelColor = .2f*pixelColor;
+				}
+			}
+
+			rayCount++;
+			realColor += pixelColor;
+			realColor.x = clamp(realColor.x, 0.0, 1.0);
+			realColor.y = clamp(realColor.y, 0.0, 1.0);
+			realColor.z = clamp(realColor.z, 0.0, 1.0);
+
+		}//while loop
+
+		colors[index] += realColor;
    }
 }
 
@@ -234,7 +249,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 // Wrapper for the __global__ call that sets up the kernel calls and does a ton of memory management
 void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials, geom* geoms, int numberOfGeoms, bool cameraMoved){
   
-  int traceDepth = 1; //determines how many bounces the raytracer traces
+  int traceDepth = 5; //determines how many bounces the raytracer traces
 
   // set up crucial magic
   int tileSize = 8;
