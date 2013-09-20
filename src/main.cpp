@@ -92,6 +92,7 @@ int main(int argc, char** argv){
   #else
 	  glutDisplayFunc(display);
 	  glutKeyboardFunc(keyboard);
+	  glutMouseFunc(mouse);
 
 	  glutMainLoop();
   #endif
@@ -261,6 +262,19 @@ void runCuda(){
 			   iterations = 1;
 			   break;
 		}
+	}
+
+	void mouse(int button, int state, int x, int y){
+		if (button == GLUT_LEFT_BUTTON){
+			renderCam->focalLengths[targetFrame] += .1;
+			cameraMoved = true;
+			iterations = 1;
+		}else if (button == GLUT_RIGHT_BUTTON){
+			renderCam->focalLengths[targetFrame] -= .1;
+			cameraMoved = true;
+			iterations = 1;
+		}
+		return;
 	}
 
 #endif
