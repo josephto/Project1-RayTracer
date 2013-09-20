@@ -141,12 +141,12 @@ void runCuda(){
       for(int x=0; x<renderCam->resolution.x; x++){
         for(int y=0; y<renderCam->resolution.y; y++){
           int index = x + (y * renderCam->resolution.x);
-          outputImage.writePixelRGB(renderCam->resolution.x-1-x,y,renderCam->image[index]);
+          outputImage.writePixelRGB(renderCam->resolution.x-1-x,y,renderCam->image[index]/(float)iterations);
         }
       }
       
       gammaSettings gamma;
-      gamma.applyGamma = true;
+      gamma.applyGamma = false;
       gamma.gamma = 1.0/2.2;
       gamma.divisor = renderCam->iterations;
       outputImage.setGammaSettings(gamma);
