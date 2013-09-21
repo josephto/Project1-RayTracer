@@ -21,6 +21,6 @@
 #endif
 
 void cudaRaytraceCore(uchar4* pos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials,
-	geom* geoms, int numberOfGeoms, bool cameraMoved);
+	geom* geoms, int numberOfGeoms, int numberOfCubes, int numberOfSpheres, bool cameraMoved);
 
 #endif

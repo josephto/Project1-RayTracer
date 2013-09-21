@@ -118,7 +118,7 @@ UP          0 1 0
 FLENGTH	    10
 
 OBJECT 0
-cube
+sphere
 material 0
 frame 0
 TRANS       0 0 0
@@ -126,73 +126,121 @@ ROTAT       0 0 90
 SCALE       .01 10 10 
 
 OBJECT 1
-cube
-material 4
+sphere
+material 0
 frame 0
-TRANS       0 5 -5
-ROTAT       0 90 0
+TRANS       0 0 0
+ROTAT       0 0 90
 SCALE       .01 10 10 
 
 OBJECT 2
-cube
+sphere
 material 0
 frame 0
-TRANS       0 10 0
+TRANS       0 0 0
 ROTAT       0 0 90
-SCALE       .01 10 10
+SCALE       .01 10 10 
 
 OBJECT 3
-cube
-material 1
+sphere
+material 0
 frame 0
-TRANS       -5 5 0
-ROTAT       0 0 0
-SCALE       .01 10 10
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
 
 OBJECT 4
-cube
-material 2
+sphere
+material 0
 frame 0
-TRANS       5 5 0
-ROTAT       0 0 0
-SCALE       .01 10 10
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
 
 OBJECT 5
-cube
-material 8 
+sphere
+material 0
 frame 0
-TRANS       0 9.6 0
+TRANS       0 0 0
 ROTAT       0 0 90
-SCALE       .3 3 3
+SCALE       .01 10 10 
 
 OBJECT 6
-cube
-material 8 
+sphere
+material 0
 frame 0
-TRANS       -4.6 5 0
-ROTAT       0 0 0
-SCALE       .3 3 3
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
 
 OBJECT 7
 sphere
-material 4
+material 0
 frame 0
-TRANS       0 2 0
-ROTAT       0 180 0
-SCALE       3 3 3
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
 
 OBJECT 8
 sphere
-material 3
+material 0
 frame 0
-TRANS       2 5.5 2.5
-ROTAT       0 180 0
-SCALE       2.5 2.5 2.5
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
 
 OBJECT 9
 sphere
-material 6
+material 0
 frame 0
-TRANS       -2 6 -2.5
-ROTAT       0 180 0
-SCALE       3 3 3
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 10
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 11
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 12
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 13
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 14
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 
+
+OBJECT 15
+sphere
+material 0
+frame 0
+TRANS       0 0 0
+ROTAT       0 0 90
+SCALE       .01 10 10 

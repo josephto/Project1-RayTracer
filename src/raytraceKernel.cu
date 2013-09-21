@@ -115,7 +115,8 @@ __global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* 
 //TODO: IMPLEMENT THIS FUNCTION
 //Core raytracer kernel
 __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, int rayDepth, glm::vec3* colors,
-                            staticGeom* geoms, int numberOfGeoms, material* cudamaterials, int numberOfMaterials, int* cudalights, int numberOfLights){
+                            staticGeom* geoms, int numberOfGeoms, 
+							int numberOfCubes, int numberOfSpheres, material* cudamaterials, int numberOfMaterials, int* cudalights, int numberOfLights){
 
   int x = (blockIdx.x * blockDim.x) + threadIdx.x;
   int y = (blockIdx.y * blockDim.y) + threadIdx.y;
@@ -149,11 +150,22 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 			vec3 pixelColor, objectColor, specColor;
 			float specExponent, isReflective;
 
-			for (int i = 0; i < numberOfGeoms; i++){
+			for (int i = 0; i < numberOfCubes; i++){
 				if(geoms[i].type == CUBE){
 					tempLength = boxIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal);
-				}else{
-					tempLength = sphereIntersectionTest(geoms[i], currentRay, tempIntersectionPoint, tempNormal);
+				}
+
+				if (tempLength < closest && tempLength >= 0){
+					closest = tempLength;
+					normal = tempNormal;
+					intersectionPoint = tempIntersectionPoint;
+					closestObjectid = i;
+				}
+			}
+
+			for(int i = numberOfCubes; i < numberOfGeoms; i++){
+				if(geoms[i].type == SPHERE){
+					tempLength = sphereIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal);
 				}
 
 				if (tempLength < closest && tempLength >= 0){
@@ -292,7 +304,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 //TODO: FINISH THIS FUNCTION
 // Wrapper for the __global__ call that sets up the kernel calls and does a ton of memory management
-void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials, geom* geoms, int numberOfGeoms, bool cameraMoved){
+void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials, geom* geoms, int numberOfGeoms, int numberOfCubes, int numberOfSpheres, bool cameraMoved){
   
   int traceDepth = 5; //determines how many bounces the raytracer traces
   std::vector<int> lightsid;
@@ -354,9 +366,14 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   if (cameraMoved)
 	clearImage<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution,cudaimage);
 
+  if (numberOfGeoms != numberOfCubes+numberOfSpheres){
+	  std::cout<<"ERROR numberOfGeoms != numberOfCubes+numberOfSpheres"<<std::endl;
+	  std::cout<<numberOfGeoms<<", "<<numberOfCubes<<", "<<numberOfSpheres<<std::endl;
+  }
+
   //kernel launches
   raytraceRay<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, (float)iterations, cam, traceDepth, 
-													cudaimage, cudageoms, numberOfGeoms, cudamaterials, numberOfMaterials, cudalights, lightsid.size());
+													cudaimage, cudageoms, numberOfGeoms, numberOfCubes, numberOfSpheres, cudamaterials, numberOfMaterials, cudalights, lightsid.size());
 
   sendImageToPBO<<<fullBlocksPerGrid, threadsPerBlock>>>(PBOpos, renderCam->resolution, cudaimage, (float)iterations);
 

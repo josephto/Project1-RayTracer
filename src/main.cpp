@@ -124,10 +124,18 @@ void runCuda(){
       materials[i] = renderScene->materials[i];
     }
     
-  
+	std::clock_t start = clock();
+
     // execute the kernel
-    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, renderScene->objects.size(), cameraMoved );
+    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, 
+		renderScene->objects.size(), renderScene->numCubes, renderScene->numSpheres, cameraMoved );
     
+	std::clock_t finish = clock();
+	double elapsed_time = double(start-finish) / CLOCKS_PER_SEC;
+	//cout<<elapsed_time<<endl;
+
+	//getchar();
+
 	cameraMoved = false;
 
     // unmap buffer object
@@ -225,7 +233,6 @@ void runCuda(){
 
 	void keyboard(unsigned char key, int x, int y)
 	{
-		std::cout << (int)key << std::endl;
 		switch (key) 
 		{
 		   case(27):

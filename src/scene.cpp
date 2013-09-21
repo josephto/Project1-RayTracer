@@ -9,6 +9,8 @@
 #include <cstring>
 
 scene::scene(string filename){
+	numCubes = 0;
+	numSpheres = 0;
 	cout << "Reading scene from " << filename << " ..." << endl;
 	cout << " " << endl;
 	char* fname = (char*)filename.c_str();
@@ -49,9 +51,11 @@ int scene::loadObject(string objectid){
         if (!line.empty() && fp_in.good()){
             if(strcmp(line.c_str(), "sphere")==0){
                 cout << "Creating new sphere..." << endl;
+				numSpheres++;
 				newObject.type = SPHERE;
             }else if(strcmp(line.c_str(), "cube")==0){
                 cout << "Creating new cube..." << endl;
+				numCubes++;
 				newObject.type = CUBE;
             }else{
 				string objline = line;
