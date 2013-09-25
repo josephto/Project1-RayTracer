@@ -17,8 +17,8 @@ __host__ __device__ glm::vec3 getPointOnRay(ray r, float t);
 __host__ __device__ glm::vec3 multiplyMV(cudaMat4 m, glm::vec4 v);
 __host__ __device__ glm::vec3 getSignOfRay(ray r);
 __host__ __device__ glm::vec3 getInverseDirectionOfRay(ray r);
-__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
-__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
+__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, bool& inside);
+__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, bool& inside);
 __host__ __device__ glm::vec3 getRandomPointOnCube(staticGeom cube, float randomSeed);
 
 //Handy dandy little hashing function that provides seeds for random number generation
@@ -70,7 +70,7 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 
 //TODO: IMPLEMENT THIS FUNCTION
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
-__host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+__host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, bool& inside){
 	float near = -1e26;
 	float far = 1e26;
 
@@ -138,9 +138,11 @@ __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& 
 	if (near < 0){
 		localPointOnRay = glm::vec4(rt.origin+far*rt.direction, 1.0);
 		realIntersectionPoint = multiplyMV(box.transform, localPointOnRay);
+		inside = 1;
 	}else{
 		localPointOnRay = glm::vec4(rt.origin+near*rt.direction, 1.0);
 		realIntersectionPoint = multiplyMV(box.transform, localPointOnRay);
+		inside = 0;
 	}
 
 	glm::vec3 localNormal;
@@ -171,7 +173,7 @@ __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& 
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.
 //Sphere intersection test, return -1 if no intersection, otherwise, distance to intersection
-__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal, bool& inside){
   
   float radius = .5;
         
@@ -196,8 +198,10 @@ __host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::
       return -1;
   } else if (t1 > 0 && t2 > 0) {
       t = min(t1, t2);
+	  inside = 0;
   } else {
       t = max(t1, t2);
+	  inside = 1;
   }
 
   glm::vec3 realIntersectionPoint = multiplyMV(sphere.transform, glm::vec4(getPointOnRay(rt, t), 1.0));

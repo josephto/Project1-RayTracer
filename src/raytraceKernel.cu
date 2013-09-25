@@ -136,23 +136,27 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		jitteredRay.origin = vec3(rayFromCamera.origin.x+degOfJitter*jitter.x, rayFromCamera.origin.y+degOfJitter*jitter.y, rayFromCamera.origin.z);	
 		jitteredRay.direction = normalize(aimPoint-jitteredRay.origin);
 
-		ray currentRay = jitteredRay;
+		ray currentRay = rayFromCamera; //jitteredRay;
 		
 		int rayCount = 0;
 		vec3 realColor = vec3(0,0,0);
-		vec3 accumulColor = vec3(0,0,0);
 		vec3 accumulReflectiveSurfaceColor = vec3(1,1,1);
+		vec3 accumulColor = vec3(0,0,0);
 
 		while(rayCount <= rayDepth){
-			float tempLength, closest = 1e26;
-			int closestObjectid;
-			vec3 tempIntersectionPoint, tempNormal, normal, intersectionPoint;
-			vec3 pixelColor, objectColor, specColor;
-			float specExponent, isReflective;
+			float tempLength, closest = 1e26, indexOfRefraction = 0;
+			int closestObjectid = -1;
+			vec3 tempIntersectionPoint = vec3(0,0,0), tempNormal = vec3(0,0,0), normal = vec3(0,0,0), intersectionPoint = vec3(0,0,0);
+			vec3 pixelColor = vec3(0,0,0), objectColor = vec3(0,0,0), specColor = vec3(0,0,0);
+			float specExponent = 0, 
+			bool isReflective = 0, isRefractive = 0;
+			bool inside = false, tempInside = false;
+
+			//input text file must load cubes first before loading spheres
 
 			for (int i = 0; i < numberOfCubes; i++){
 				if(geoms[i].type == CUBE){
-					tempLength = boxIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal);
+					tempLength = boxIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal, tempInside);
 				}
 
 				if (tempLength < closest && tempLength >= 0){
@@ -160,12 +164,13 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 					normal = tempNormal;
 					intersectionPoint = tempIntersectionPoint;
 					closestObjectid = i;
+					inside = tempInside;
 				}
 			}
 
 			for(int i = numberOfCubes; i < numberOfGeoms; i++){
 				if(geoms[i].type == SPHERE){
-					tempLength = sphereIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal);
+					tempLength = sphereIntersectionTest( geoms[i], currentRay, tempIntersectionPoint, tempNormal, tempInside);
 				}
 
 				if (tempLength < closest && tempLength >= 0){
@@ -173,6 +178,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 					normal = tempNormal;
 					intersectionPoint = tempIntersectionPoint;
 					closestObjectid = i;
+					inside = tempInside;
 				}
 			}
 
@@ -184,11 +190,14 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				specExponent = cudamaterials[geoms[closestObjectid].materialid].specularExponent;
 				specColor = cudamaterials[geoms[closestObjectid].materialid].specularColor;
 				isReflective = cudamaterials[geoms[closestObjectid].materialid].hasReflective;
+				isRefractive = cudamaterials[geoms[closestObjectid].materialid].hasRefractive;
+				indexOfRefraction = cudamaterials[geoms[closestObjectid].materialid].indexOfRefraction;
 
 				vec3 accumulDiffuse = vec3(0,0,0);
 				vec3 accumulSpec = vec3(0,0,0);
 				vec3 ambient = objectColor;
-				vec3 reflectedDir;
+				vec3 reflectedDir = vec3(0,0,0);
+				vec3 refractedDir = vec3(0,0,0);
 			
 				for (int j = 0; j < numberOfLights; j++){
 					if (closestObjectid == cudalights[j]){
@@ -211,7 +220,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 			
 					//diffuse
 					vec3 diffuse = dot(normal, lightDir) * cudamaterials[geoms[cudalights[j]].materialid].color * (objectColor);
-					diffuse = vec3(clamp(diffuse.x, 0.0, 1.0), clamp(diffuse.y, 0.0, 1.0), clamp(diffuse.z, 0.0, 1.0));
+					//diffuse = vec3(clamp(diffuse.x, 0.0, 1.0), clamp(diffuse.y, 0.0, 1.0), clamp(diffuse.z, 0.0, 1.0));
 
 
 					vec3 specular = vec3(0,0,0);
@@ -231,17 +240,17 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 					pointToLight.direction = lightDir;
 					float lengthFromPointToLight;
 					if (geoms[cudalights[j]].type == CUBE)
-						lengthFromPointToLight = boxIntersectionTest( geoms[cudalights[j]], pointToLight, tempIntersectionPoint, tempNormal);
+						lengthFromPointToLight = boxIntersectionTest( geoms[cudalights[j]], pointToLight, tempIntersectionPoint, tempNormal, tempInside);
 					else if (geoms[cudalights[j]].type == SPHERE)
-						lengthFromPointToLight = sphereIntersectionTest( geoms[cudalights[j]], pointToLight, tempIntersectionPoint, tempNormal);
+						lengthFromPointToLight = sphereIntersectionTest( geoms[cudalights[j]], pointToLight, tempIntersectionPoint, tempNormal, tempInside);
 					tempLength = 1e26;
 					int occluded = -1;
 					for (int i = 0; i < numberOfGeoms; i++){
 						if (i != closestObjectid){
 							if(geoms[i].type == CUBE){
-								tempLength = boxIntersectionTest( geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
+								tempLength = boxIntersectionTest( geoms[i], pointToLight, tempIntersectionPoint, tempNormal, tempInside);
 							}else{
-								tempLength = sphereIntersectionTest(geoms[i], pointToLight, tempIntersectionPoint, tempNormal);
+								tempLength = sphereIntersectionTest(geoms[i], pointToLight, tempIntersectionPoint, tempNormal, tempInside);
 							}
 
 							if (tempLength < lengthFromPointToLight && tempLength != -1){
@@ -260,8 +269,8 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 						}
 					}
 					if (occluded != -1 && !hitLight){
-						//diffuse *= .1f;
-						//specular *= .1f;
+						//diffuse *= .2f;
+						//specular *= .2f;
 						diffuse = vec3(0,0,0);
 						specular = vec3(0,0,0);
 					}
@@ -274,30 +283,82 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				}//for loop
 
 				if (specExponent > 0){
-					accumulColor += .4f*accumulDiffuse + .5f*accumulSpec + .1f*ambient;
+					accumulColor += .5f*accumulDiffuse + .4f*accumulSpec + .1f*ambient;
 				}else{
 					accumulColor += accumulDiffuse;
 				}
 				accumulColor = clamp(accumulColor, vec3(0,0,0), vec3(1,1,1));
 
-				if (isReflective){
+				float n1 = 0, n2 = 0;
+				float costheta_i = 0; float costheta_t = 0;
+				float sin2theta_t = 0;
+				float R = 0;
+				bool TIR = false;
+				float schlicksR = 0;
+				float random = 0;
+
+				if (isRefractive){
+
+					//graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
+
+					if (inside){
+						n1 = indexOfRefraction;
+						n2 = 1.0f;
+						normal = -normal;
+					}else{
+						n1 = 1.0f;
+						n2 = indexOfRefraction;
+					}
+
+					costheta_i = glm::dot(-1.0f*currentRay.direction, normal);
+					sin2theta_t = pow(n1/n2,2)*(1-pow(costheta_i,2));
+					R = pow((n1-n2)/(n1+n2),2);
+					if (sin2theta_t > 1){
+						TIR = true;
+					}else{
+						costheta_t = sqrt(1-sin2theta_t);
+						refractedDir = (n1/n2)*currentRay.direction + ((n1/n2)*costheta_i - sqrt(1-sin2theta_t))*normal;
+					}
+
+					if (n1 <= n2){
+						schlicksR = R + (1-R)*pow(1-costheta_i,5);
+					}else if (n1 > n2 && !TIR){
+						schlicksR = R + (1-R)*pow(1-costheta_t,5);
+					}else{
+						schlicksR = 1;
+					}
+  
+					thrust::default_random_engine rng(hash((x + (y * resolution.x))*time));
+					thrust::uniform_real_distribution<float> u01(0,1);
+
+					random = (float) u01(rng);
+					
+					currentRay.origin = intersectionPoint+0.01f*refractedDir;
+					currentRay.direction = refractedDir;
+					
+					if (random <= schlicksR){
+						currentRay.origin = intersectionPoint+0.0001f*reflectedDir;
+						currentRay.direction = reflectedDir;
+					}
+
+					accumulReflectiveSurfaceColor *= objectColor; //accumulColor;
+
+				}else if (isReflective){
 					currentRay.origin = intersectionPoint+0.0001f*reflectedDir;
 					currentRay.direction = reflectedDir;
-					accumulReflectiveSurfaceColor *= accumulColor;
+					accumulReflectiveSurfaceColor *= objectColor; //accumulColor;
 				}else{
 					rayCount = rayDepth;
 				}
 
-
 			}//if intersects with anything
 
 			rayCount++;
-			//realColor += accumulColor;
-			//realColor = clamp(realColor, vec3(0,0,0), vec3(1,1,1));
 
 		}//while loop
 
 		realColor = accumulReflectiveSurfaceColor*accumulColor;
+		//realColor = accumulColor;
 		colors[index] += realColor;
    }
 }

@@ -181,7 +181,7 @@ void runCuda(){
       for(int i=0; i<renderCam->resolution.x*renderCam->resolution.y; i++){
         renderCam->image[i] = glm::vec3(0,0,0);
       }
-      cudaDeviceReset(); 
+      //cudaDeviceReset(); 
       finishedRender = false;
     }
   }
