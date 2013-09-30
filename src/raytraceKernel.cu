@@ -346,7 +346,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				}else if (isReflective){
 					currentRay.origin = intersectionPoint+0.0001f*reflectedDir;
 					currentRay.direction = reflectedDir;
-					accumulReflectiveSurfaceColor *= objectColor; //accumulColor;
+					accumulReflectiveSurfaceColor *= accumulColor; //objectColor; //accumulColor;
 				}else{
 					rayCount = rayDepth;
 				}
